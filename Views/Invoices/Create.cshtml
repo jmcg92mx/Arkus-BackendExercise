@@ -1,0 +1,97 @@
+﻿@{
+    ViewData["Title"] = "Invoice details";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Styles
+{
+    <link href="https://unpkg.com/gijgo@1.9.13/css/gijgo.min.css" rel="stylesheet" type="text/css" />
+}
+
+<h1>Create</h1>
+
+<h4>New Transaction</h4>
+<hr />
+    <div class="row">
+        <div class="col-lg-4">
+            <p>Bill all unbilled transactions from</p>
+            <input id="datepickerStart" />
+
+            <p>to</p>
+            <input id="datepickerEnd" />
+
+            <button class="btn btn-primary" id="runbtn">Get transactions</button>
+        </div>
+        <div class="col-lg-8">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th>Id</th>
+                        <th>To</th>
+                        <th>Amount</th>
+                        <th>Date</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody id="tableContent">
+                    <tr>
+                        <td colspan="5">Use the form to get the transactions.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <button class="btn btn-success float-right" id="billbtn">Bill transactions</button>
+        </div>
+    </div>
+@section Scripts
+{
+    <script src="https://unpkg.com/gijgo@1.9.13/js/gijgo.min.js" type="text/javascript"></script>
+    <script>
+        var collection = [];
+        $('#datepickerStart').datepicker({
+            format: 'dd-mmm-yyyy',
+            uiLibrary: 'bootstrap4'
+        });
+        $('#datepickerEnd').datepicker({
+            format: 'dd-mmm-yyyy',
+            uiLibrary: 'bootstrap4'
+        });
+
+        $("#runbtn").on('click', function () {
+            $("#tableContent").html('<tr><td colspan="5">Loading...</td></tr>')
+            let start = $('#datepickerStart').datepicker().value();
+            let end = $('#datepickerEnd').datepicker().value();
+            collection = [];
+            $.ajax({
+                type: 'get',
+                url: '/api/transactions?start=' + start + '&end=' + end
+            }).then(function (resp) {
+                if (resp.length === 0)
+                    $("#tableContent").html('<tr><td colspan="5">There are no transactions on the specified period.</td></tr>')
+                else {
+                    let html = '';
+                    for (let i = 0; i < resp.length; i++) {
+                        html += '<tr><td>' + resp[i].id + '</td><td>' + resp[i].to + '</td><td class="text-right">$' + resp[i].amount
+                             + '</td><td>' + resp[i].transactionDate + '</td><td>' + resp[i].description + '</td></tr>';
+                        collection.push(resp[i].id);
+                    }
+                    $("#tableContent").html(html)
+                }
+            }).catch(function (err) {
+                $("#tableContent").html('<tr><td class="text-danger" colspan="5">An error has ocurred while recovering the data. Please try again.</td></tr>')
+            });
+        });
+
+        $("#billbtn").on('click', function () {
+            if (collection.length > 0) {
+                $.ajax({
+                    method: 'Post',
+                    url: '/Invoices/Create',
+                    data: JSON.stringify(collection),
+                    contentType: 'application/json'
+                }).then(function (resp) {
+                    location.href = "/Invoices"
+                });
+            }
+        });
+    </script>
+}
